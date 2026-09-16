@@ -259,6 +259,27 @@
     white-space:nowrap;
   }
   td.actions{text-align:right; white-space:nowrap;}
+  td.mode{white-space:nowrap;}
+  .tag{
+    display:inline-block;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    padding:3px 8px;
+    border-radius:12px;
+    white-space:nowrap;
+  }
+  .tag-gpay{
+    background:rgba(31,75,63,0.12);
+    color:var(--ledger-green);
+    border:1px solid rgba(31,75,63,0.25);
+  }
+  .tag-due{
+    background:rgba(181,71,58,0.10);
+    color:var(--rule-red);
+    border:1px solid rgba(181,71,58,0.28);
+  }
   .iconbtn{
     background:none;
     border:none;
@@ -679,6 +700,7 @@
             ? `<input type="text" class="name-edit" id="name-input-${e.id}" data-id="${e.id}" value="${escapeHtml(e.name)}">`
             : `<span data-action="edit-name" data-id="${e.id}" title="Click to edit">${escapeHtml(e.name)}</span>`
           }</td>
+          <td class="mode"><span class="tag ${e.mode === 'കടം' ? 'tag-due' : 'tag-gpay'}">${escapeHtml(e.mode || 'Gpay')}</span></td>
           <td class="amt">${editingAmountId === e.id
             ? `<input type="number" class="amt-edit" id="amt-input-${e.id}" data-id="${e.id}" min="0" step="0.01" value="${e.amount ? e.amount : ''}" placeholder="0.00">`
             : e.amount > 0
@@ -755,6 +777,7 @@
               <th>No.</th>
               <th>Date</th>
               <th>Name</th>
+              <th>Mode</th>
               <th class="num">Amount</th>
               <th></th>
             </tr>
