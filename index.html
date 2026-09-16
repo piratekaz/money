@@ -282,16 +282,24 @@
   }
   .iconbtn{
     background:none;
-    border:none;
+    border:1px solid #cabf9c;
     cursor:pointer;
-    font-family:'JetBrains Mono', monospace;
-    font-size:10.5px;
-    padding:4px 6px;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:11.5px;
+    padding:5px 10px;
     border-radius:2px;
     color:var(--muted);
   }
   .iconbtn:hover{color:var(--ink); background:#e9e0c4;}
-  .iconbtn.danger:hover{color:var(--rule-red);}
+  .iconbtn.active{
+    background:var(--ledger-green);
+    border-color:var(--ledger-green);
+    color:var(--paper);
+  }
+  .iconbtn.active:hover{background:#163a30; color:var(--paper);}
+  tr.is-received td.no, tr.is-received td.date, tr.is-received td.name,
+  tr.is-received td.mode, tr.is-received td.amt{opacity:0.55;}
   .toolbar{
     margin:14px 28px 0 60px;
     display:flex;
@@ -485,6 +493,12 @@
         list.sort((a,b) => b.amount - a.amount);
         break;
     }
+
+    // Entries marked കിട്ടി (received) always sink to the bottom, below the
+    // rest of the list, regardless of the active sort mode above. The sort
+    // is stable, so relative order within each group is preserved.
+    list.sort((a,b) => (a.received ? 1 : 0) - (b.received ? 1 : 0));
+
     return list;
   }
 
@@ -550,6 +564,13 @@
       saveEntries();
     }
 
+    // Migration: entries saved before the കിട്ടി (received) field existed default to not received.
+    const missingReceived = entries.filter(e => typeof e.received !== 'boolean');
+    if(missingReceived.length > 0){
+      missingReceived.forEach(e => { e.received = false; });
+      saveEntries();
+    }
+
     // One-time seed: preload the roster with amount left at 0 so amounts can be
     // filled in later by clicking next to each name. Only runs once, and only
     // if the ledger is empty, so it never clobbers real data.
@@ -558,7 +579,7 @@
     if(!seeded && entries.length === 0){
       const now = new Date().toISOString();
       SEED_NAMES.forEach(name => {
-        entries.push({ id: uid(), receiptNo: nextReceiptNo, name, amount: 0, mode: 'Gpay', date: now });
+        entries.push({ id: uid(), receiptNo: nextReceiptNo, name, amount: 0, mode: 'Gpay', date: now, received: false });
         nextReceiptNo += 1;
       });
       saveCounter();
@@ -597,7 +618,7 @@
     if(!name){ formError = 'Enter a name.'; render(); return; }
     if(!amountRaw || isNaN(amount) || amount <= 0){ formError = 'Enter an amount greater than 0.'; render(); return; }
     formError = '';
-    entries.push({ id: uid(), receiptNo: nextReceiptNo, name, amount, mode, date: new Date().toISOString() });
+    entries.push({ id: uid(), receiptNo: nextReceiptNo, name, amount, mode, date: new Date().toISOString(), received: false });
     nextReceiptNo += 1;
     saveCounter();
     saveEntries();
@@ -628,8 +649,10 @@
     render();
   }
 
-  function removeEntry(id){
-    entries = entries.filter(e => e.id !== id);
+  function toggleReceived(id){
+    const entry = entries.find(e => e.id === id);
+    if(!entry) return;
+    entry.received = !entry.received;
     saveEntries();
     render();
   }
@@ -693,7 +716,7 @@
     const rowsHtml = visible.length === 0
       ? ''
       : visible.map((e, idx) => `
-        <tr>
+        <tr class="${e.received ? 'is-received' : ''}">
           <td class="no">${fmtNo(idx + 1)}</td>
           <td class="date">${fmtDate(e.date)}</td>
           <td class="name">${editingNameId === e.id
@@ -708,7 +731,7 @@
               : `<span class="amt-pending" data-action="edit-amount" data-id="${e.id}">+ Add amount</span>`
           }</td>
           <td class="actions">
-            <button class="iconbtn danger" data-action="remove" data-id="${e.id}">remove</button>
+            <button class="iconbtn ${e.received ? 'active' : ''}" data-action="receive" data-id="${e.id}">കിട്ടി</button>
           </td>
         </tr>`).join('');
 
@@ -806,8 +829,8 @@
     const clearBtn = document.getElementById('clear-all');
     if(clearBtn) clearBtn.addEventListener('click', clearAll);
 
-    root.querySelectorAll('[data-action="remove"]').forEach(btn => {
-      btn.addEventListener('click', () => removeEntry(btn.dataset.id));
+    root.querySelectorAll('[data-action="receive"]').forEach(btn => {
+      btn.addEventListener('click', () => toggleReceived(btn.dataset.id));
     });
     root.querySelectorAll('[data-action="edit-amount"]').forEach(el => {
       el.addEventListener('click', () => {
