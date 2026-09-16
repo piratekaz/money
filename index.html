@@ -300,6 +300,20 @@
   .iconbtn.active:hover{background:#163a30; color:var(--paper);}
   tr.is-received td.no, tr.is-received td.date, tr.is-received td.name,
   tr.is-received td.mode, tr.is-received td.amt{opacity:0.55;}
+  tr.boundary-row{pointer-events:none;}
+  tr.boundary-row:hover{background:transparent;}
+  td.boundary{
+    padding:8px 5px 6px;
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    border-top:2px dashed var(--rule-red);
+    border-bottom:none;
+    opacity:0.85;
+  }
   .toolbar{
     margin:14px 28px 0 60px;
     display:flex;
@@ -493,11 +507,6 @@
         list.sort((a,b) => b.amount - a.amount);
         break;
     }
-
-    // Entries marked കിട്ടി (received) always sink to the bottom, below the
-    // rest of the list, regardless of the active sort mode above. The sort
-    // is stable, so relative order within each group is preserved.
-    list.sort((a,b) => (a.received ? 1 : 0) - (b.received ? 1 : 0));
 
     return list;
   }
@@ -713,11 +722,14 @@
     const caretPos = wasSearchFocused ? activeEl.selectionStart : null;
 
     const visible = getVisibleEntries();
-    const rowsHtml = visible.length === 0
-      ? ''
-      : visible.map((e, idx) => `
+    const activeEntries = visible.filter(e => !e.received);
+    const receivedEntries = visible.filter(e => e.received);
+    let rowNo = 0;
+    const buildRow = (e) => {
+      rowNo += 1;
+      return `
         <tr class="${e.received ? 'is-received' : ''}">
-          <td class="no">${fmtNo(idx + 1)}</td>
+          <td class="no">${fmtNo(rowNo)}</td>
           <td class="date">${fmtDate(e.date)}</td>
           <td class="name">${editingNameId === e.id
             ? `<input type="text" class="name-edit" id="name-input-${e.id}" data-id="${e.id}" value="${escapeHtml(e.name)}">`
@@ -733,7 +745,14 @@
           <td class="actions">
             <button class="iconbtn ${e.received ? 'active' : ''}" data-action="receive" data-id="${e.id}">കിട്ടി</button>
           </td>
-        </tr>`).join('');
+        </tr>`;
+    };
+    // Received entries render as their own group below a boundary row, rather
+    // than just being sorted last within one continuous list.
+    const boundaryHtml = (activeEntries.length > 0 && receivedEntries.length > 0)
+      ? `<tr class="boundary-row"><td class="boundary" colspan="6">കിട്ടി</td></tr>`
+      : '';
+    const rowsHtml = activeEntries.map(buildRow).join('') + boundaryHtml + receivedEntries.map(buildRow).join('');
 
     root.innerHTML = `
       <header>
