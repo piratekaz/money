@@ -307,12 +307,7 @@
     color:var(--muted);
   }
   .iconbtn:hover{color:var(--ink); background:#e9e0c4;}
-  .iconbtn.active{
-    background:var(--ledger-green);
-    border-color:var(--ledger-green);
-    color:var(--paper);
-  }
-  .iconbtn.active:hover{background:#163a30; color:var(--paper);}
+  .iconbtn.danger:hover{color:var(--rule-red); border-color:var(--rule-red);}
   tr.is-received td.no, tr.is-received td.date, tr.is-received td.name,
   tr.is-received td.mode, tr.is-received td.amt{opacity:0.55;}
   tr.boundary-row{pointer-events:none;}
@@ -342,6 +337,13 @@
     flex-wrap:wrap;
     align-items:center;
   }
+  .modefilters{
+    margin:8px 28px 0 60px;
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
   .chip{
     font-family:'JetBrains Mono', monospace;
     font-size:11.5px;
@@ -357,6 +359,16 @@
   .chip.active{
     background:var(--ledger-green);
     border-color:var(--ledger-green);
+    color:var(--paper);
+  }
+  .chip-gpay.active{
+    background:var(--ledger-green);
+    border-color:var(--ledger-green);
+    color:var(--paper);
+  }
+  .chip-due.active{
+    background:var(--rule-red);
+    border-color:var(--rule-red);
     color:var(--paper);
   }
   .search-input{
@@ -449,6 +461,7 @@
     .table-wrap{margin:6px 14px 0;}
     .toolbar{margin:14px 14px 0;}
     .amtfilters{margin:8px 14px 0;}
+    .modefilters{margin:8px 14px 0;}
     .footer{margin:16px 14px 0;}
     .empty{margin:16px 14px 8px;}
     td.date{display:none;}
@@ -481,6 +494,7 @@
   let searchQuery = '';
   let sortMode = 'no-asc'; // no-asc | no-desc | date-desc | date-asc | name-asc | name-desc | amount-desc | amount-asc
   let amountFilter = null; // null = all amounts, otherwise a specific numeric amount to filter by
+  let modeFilter = null; // null = all modes, otherwise 'Gpay' or 'കടം'
   let editingAmountId = null; // id of entry whose amount cell is currently being edited inline
   let editingNameId = null; // id of entry whose name cell is currently being edited inline
 
@@ -494,6 +508,10 @@
 
     if(amountFilter !== null){
       list = list.filter(e => e.amount === amountFilter);
+    }
+
+    if(modeFilter !== null){
+      list = list.filter(e => (e.mode || 'Gpay') === modeFilter);
     }
 
     switch(sortMode){
@@ -684,6 +702,12 @@
     render();
   }
 
+  function removeEntry(id){
+    entries = entries.filter(e => e.id !== id);
+    saveEntries();
+    render();
+  }
+
   function clearAll(){
     if(!confirm('Clear all entries? This cannot be undone.')) return;
     entries = [];
@@ -761,7 +785,10 @@
               : `<span class="amt-pending" data-action="edit-amount" data-id="${e.id}">+ Add amount</span>`
           }</td>
           <td class="actions">
-            <button class="iconbtn ${e.received ? 'active' : ''}" data-action="receive" data-id="${e.id}">കിട്ടി</button>
+            ${e.received
+              ? `<button class="iconbtn danger" data-action="remove" data-id="${e.id}">remove</button>`
+              : `<button class="iconbtn" data-action="receive" data-id="${e.id}">കിട്ടി</button>`
+            }
           </td>
         </tr>`;
     };
@@ -828,6 +855,11 @@
           ${distinctAmounts().map(a => `<button class="chip ${amountFilter === a ? 'active' : ''}" data-action="filter-amount" data-amount="${a}">${fmtINR(a)}</button>`).join('')}
         </div>
         ` : ''}
+        <div class="modefilters">
+          <button class="chip ${modeFilter === null ? 'active' : ''}" data-action="filter-mode" data-mode="">All modes</button>
+          <button class="chip chip-gpay ${modeFilter === 'Gpay' ? 'active' : ''}" data-action="filter-mode" data-mode="Gpay">Gpay</button>
+          <button class="chip chip-due ${modeFilter === 'കടം' ? 'active' : ''}" data-action="filter-mode" data-mode="കടം">കടം</button>
+        </div>
       ` : ''}
 
       ${entries.length === 0 ? `
@@ -873,6 +905,9 @@
 
     root.querySelectorAll('[data-action="receive"]').forEach(btn => {
       btn.addEventListener('click', () => toggleReceived(btn.dataset.id));
+    });
+    root.querySelectorAll('[data-action="remove"]').forEach(btn => {
+      btn.addEventListener('click', () => removeEntry(btn.dataset.id));
     });
     root.querySelectorAll('[data-action="edit-amount"]').forEach(el => {
       el.addEventListener('click', () => {
@@ -931,6 +966,13 @@
       btn.addEventListener('click', () => {
         const val = btn.dataset.amount;
         amountFilter = val === '' ? null : parseFloat(val);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-action="filter-mode"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.mode;
+        modeFilter = val === '' ? null : val;
         render();
       });
     });
