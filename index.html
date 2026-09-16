@@ -99,6 +99,21 @@
     font-weight:600;
     font-variant-numeric:tabular-nums;
   }
+  .totalpill .modes{
+    margin-top:6px;
+    padding-top:6px;
+    border-top:1px solid rgba(244,239,225,0.25);
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+  .totalpill .modes .gpay{color:#8fe3b9;}
+  .totalpill .modes .due{color:#ffab9b;}
   form{
     margin:0 28px 0 60px;
     display:grid;
@@ -521,6 +536,9 @@
   function total(){
     return entries.reduce((s,e)=>s+e.amount,0);
   }
+  function totalByMode(mode){
+    return entries.reduce((s,e) => s + ((e.mode || 'Gpay') === mode ? e.amount : 0), 0);
+  }
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -762,6 +780,11 @@
         <div class="totalpill">
           <span class="label">Total Collected</span>
           <span class="amt">${fmtINR(total())}</span>
+          ${entries.length > 0 ? `
+          <div class="modes">
+            <span class="gpay">Gpay ${fmtINR(totalByMode('Gpay'))}</span>
+            <span class="due">കടം ${fmtINR(totalByMode('കടം'))}</span>
+          </div>` : ''}
         </div>
       </header>
 
